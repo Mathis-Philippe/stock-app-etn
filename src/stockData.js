@@ -1,0 +1,16 @@
+export const stockData = [
+    { sku: "1.1/2 GALVA", nom: "COURBE FONTE M/F 15X21", emplacement: "D-24", stock_theorique: 102 },
+    { sku: "1.1/2 NOIR", nom: "COURBE FONTE M/F 15X21", emplacement: "C-22", stock_theorique: 179 },
+    { sku: "1.1/4 GALVA", nom: "COURBE FONTE M/F 8X13", emplacement: "A-02", stock_theorique: 92 },
+    { sku: "1.1/4 NOIR", nom: "COURBE FONTE M/F 8X13", emplacement: "D-44", stock_theorique: 14 },
+    { sku: "1.1 GALVA", nom: "COURBE FONTE M/F 26X34", emplacement: "B-38", stock_theorique: 106 },
+    { sku: "1.1 NOIR", nom: "COURBE FONTE M/F 26X34", emplacement: "C-26", stock_theorique: 71 },
+    { sku: "1.2 GALVA", nom: "COURBE FONTE M/F 50X60", emplacement: "C-20", stock_theorique: 188 },
+    { sku: "1.2 NOIR", nom: "COURBE FONTE M/F 50X60", emplacement: "A-22", stock_theorique: 20 },
+    { sku: "1.2 NOIR_TEST", nom: "COURBE FONTE M/F 50X60", emplacement: "C-22", stock_theorique: 102 },
+    { sku: "1.3/4 GALVA", nom: "COURBE FONTE M/F 20X27", emplacement: "B-23", stock_theorique: 121 },
+    { sku: "1.3/4 NOIR", nom: "COURBE FONTE M/F 20X27", emplacement: "B-43", stock_theorique: 74 },
+    { sku: "1.3/8 GALVA", nom: "COURBE FONTE M/F 12X17", emplacement: "C-01", stock_theorique: 87 },
+    { sku: "1.3/8 NOIR", nom: "COURBE FONTE M/F 12X17", emplacement: "C-25", stock_theorique: 99 },
+    { sku: "1.11/2 GALVA", nom: "COURBE FONTE M/F 40X49", emplacement: "A-06", stock_theorique: 23 },
+];
