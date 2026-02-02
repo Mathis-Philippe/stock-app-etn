@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { parseScanData } from '../utils/scanner';
+import { useState } from 'react';
+import { useScanListener } from '../hooks/useScannerListener';
 import { stockData } from '../stockData';
 import Header from '../components/Header';
 import NumericKeypad from '../components/NumericKeypad';
@@ -35,30 +35,10 @@ export default function InventoryView({ onBack }) {
     }
   };
 
-  useEffect(() => {
-    let buffer = '';
-    let lastKeyTime = Date.now();
-    const handleKeyDown = (e) => {
-      if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) || e.key === ' ') {
-            e.preventDefault();
-        }
-      if (scannedProduct) return;
-
-      const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 2000) buffer = '';
-      lastKeyTime = currentTime;
-      if (e.key === 'Enter') buffer += " "; 
-      else if (e.key.length === 1) buffer += e.key;
-      
-      const detectedSku = parseScanData(buffer);
-      if (detectedSku) {
+  useScanListener((detectedSku) => {
+        if (scannedProduct) return;
         openInputForProduct(detectedSku);
-        buffer = '';
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [scannedProduct, inventory]);
+    });
 
   const handleNumberClick = (num) => {
     if (quantityInput.length < 5) { 
@@ -183,7 +163,7 @@ export default function InventoryView({ onBack }) {
                     <span className="w-1 h-8 bg-blue-500 ml-1 animate-pulse"></span>
                 </div>
               </div>
-              
+
               <NumericKeypad 
                 onNumber={handleNumberClick}
                 onDelete={handleDelete}

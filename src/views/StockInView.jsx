@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { parseScanData } from '../utils/scanner';
+import { useState} from 'react';
+import { useScanListener } from '../hooks/useScannerListener';
 import { stockData } from '../stockData';
 import Header from '../components/Header';
 import NumericKeypad from '../components/NumericKeypad';
@@ -11,43 +11,16 @@ export default function StockInView({ onBack }) {
   const [history, setHistory] = useState([]); 
 
 
-  useEffect(() => {
-    let buffer = '';
-    let lastKeyTime = Date.now();
-    
-    const handleKeyDown = (e) => {
-      if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) || e.key === ' ') {
-        e.preventDefault();
+  useScanListener((detectedSku) => {
+      const found = stockData.find(p => p.sku === detectedSku);
+      if (found) {
+          setProduct(found);
+          setAddQty("");
+      } else {
+          if(navigator.vibrate) navigator.vibrate(200);
+          alert("Produit inconnu !");
       }
-
-      const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 2000) buffer = '';
-      lastKeyTime = currentTime;
-
-      if (e.key === 'Enter') {
-          e.preventDefault();
-          buffer += " ";
-      } else if (e.key.length === 1) {
-          buffer += e.key;
-      }
-      
-      const detectedSku = parseScanData(buffer);
-      if (detectedSku) {
-        const found = stockData.find(p => p.sku === detectedSku);
-        if (found) {
-            setProduct(found);
-            setAddQty("");
-        } else {
-            if(navigator.vibrate) navigator.vibrate(200);
-            alert("Produit inconnu !");
-        }
-        buffer = '';
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  });
 
 
   const handleNumberClick = (num) => {
@@ -58,11 +31,6 @@ export default function StockInView({ onBack }) {
     setAddQty(prev => prev.slice(0, -1));
   };
 
-
-  const addFastQty = (amount) => {
-    const current = parseInt(addQty) || 0;
-    setAddQty((current + amount).toString());
-  };
 
   const handleValidate = () => {
     const qty = parseInt(addQty);

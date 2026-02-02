@@ -3,15 +3,17 @@ import { parseScanData } from '../utils/scanner';
 import Header from '../components/Header';
 import { 
     ShoppingCart, Check, XCircle, BoxSelect, 
-    ChevronRight, User, Calendar, Clock, ArrowRight
+    ChevronRight, User, Calendar, Clock, ArrowRight, Lock
 } from 'lucide-react';
 
-const MOCK_ORDERS = [
+// Données initiales avec la nouvelle propriété isLocked
+const INITIAL_ORDERS = [
   { 
     id: "CMD-8024", 
     client: "SARL DUPONT", 
     date: "10:30", 
     status: "pending", 
+    isLocked: false, 
     items: [
         { sku: "1.1/2 GALVA", qty_asked: 10, qty_picked: 0, status: 'pending' },
         { sku: "1.1 GALVA", qty_asked: 20, qty_picked: 0, status: 'pending' }
@@ -22,6 +24,7 @@ const MOCK_ORDERS = [
     client: "M. MARTIN", 
     date: "11:15", 
     status: "pending", 
+    isLocked: false,
     items: [
         { sku: "1.3/4 NOIR", qty_asked: 5, qty_picked: 0, status: 'pending' },
         { sku: "1.2 NOIR", qty_asked: 2, qty_picked: 0, status: 'pending' },
@@ -33,17 +36,18 @@ const MOCK_ORDERS = [
     client: "ENTREPRISE BATIPRO", 
     date: "09:00", 
     status: "done", 
+    isLocked: false,
     items: [
         { sku: "1.3/8 GALVA", qty_asked: 100, qty_picked: 100, status: 'done' }
     ]
   }
 ];
 
-
-const PickingSession = ({ order, onBack }) => {
+// Composant de session de picking
+const PickingSession = ({ order, onBack, onComplete, onUpdateOrder }) => {
+    // État local des articles basé sur la commande reçue
     const [items, setItems] = useState([...order.items]);
     const [feedback, setFeedback] = useState(null);
-
 
     const handleScan = (sku) => {
         const index = items.findIndex(i => i.sku === sku);
@@ -60,22 +64,28 @@ const PickingSession = ({ order, onBack }) => {
             return;
         }
 
+        // Mise à jour de l'article localement
         const newItems = [...items];
         newItems[index] = { ...item, qty_picked: item.qty_asked, status: 'done' };
         setItems(newItems);
         setFeedback({ type: 'success', text: `Validé : ${item.qty_asked}x ${item.sku}` });
+        
+        // Sauvegarde de la progression dans l'état parent
+        onUpdateOrder(order.id, newItems);
     };
 
     useEffect(() => {
         let buffer = '';
         let lastKeyTime = Date.now();
         const handleKeyDown = (e) => {
+            // Empêcher le scroll par défaut
             if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) || e.key === ' ') {
                 e.preventDefault();
             }
             const currentTime = Date.now();
             if (currentTime - lastKeyTime > 2000) buffer = '';
             lastKeyTime = currentTime;
+            
             if (e.key === 'Enter') buffer += " "; 
             else if (e.key.length === 1) buffer += e.key;
             
@@ -150,8 +160,11 @@ const PickingSession = ({ order, onBack }) => {
                     <div className="mt-8 p-6 bg-green-600 rounded-2xl text-white text-center shadow-lg animate-scale-in">
                         <Check size={48} className="mx-auto mb-2"/>
                         <h3 className="text-2xl font-bold">Commande Complète !</h3>
-                        <button onClick={onBack} className="mt-6 bg-white text-green-700 font-bold py-3 px-6 rounded-lg w-full">
-                            Retour à la liste
+                        <button 
+                            onClick={onComplete} 
+                            className="mt-6 bg-white text-green-700 font-bold py-3 px-6 rounded-lg w-full hover:bg-green-50 transition-colors"
+                        >
+                            Valider et Retourner
                         </button>
                     </div>
                 )}
@@ -160,11 +173,69 @@ const PickingSession = ({ order, onBack }) => {
     );
 };
 
+// Composant Principal
 export default function PickingView({ onBack }) {
-    const [selectedOrder, setSelectedOrder] = useState(null);
+    // État principal contenant toutes les commandes
+    const [orders, setOrders] = useState(INITIAL_ORDERS);
+    const [selectedOrderId, setSelectedOrderId] = useState(null);
 
-    if (selectedOrder) {
-        return <PickingSession order={selectedOrder} onBack={() => setSelectedOrder(null)} />;
+    // Fonction appelée quand un utilisateur clique sur une commande
+    const handleSelectOrder = (order) => {
+        // 1. Vérification si terminé
+        if (order.status === 'done') {
+            alert("Cette commande est déjà terminée !");
+            return;
+        }
+
+        // 2. Vérification si verrouillé (simulé pour un autre utilisateur)
+        if (order.isLocked) {
+            alert("Cette commande est en cours de traitement par un autre utilisateur.");
+            return;
+        }
+
+        // 3. Verrouiller la commande et entrer
+        const updatedOrders = orders.map(o => 
+            o.id === order.id ? { ...o, isLocked: true } : o
+        );
+        setOrders(updatedOrders);
+        setSelectedOrderId(order.id);
+    };
+
+    // Fonction pour mettre à jour les articles en temps réel (sauvegarde progess)
+    const handleUpdateItems = (orderId, newItems) => {
+        setOrders(prevOrders => prevOrders.map(o => 
+            o.id === orderId ? { ...o, items: newItems } : o
+        ));
+    };
+
+    // Fonction quand l'utilisateur revient en arrière SANS finir (déverrouillage)
+    const handleExitSession = () => {
+        setOrders(prevOrders => prevOrders.map(o => 
+            o.id === selectedOrderId ? { ...o, isLocked: false } : o
+        ));
+        setSelectedOrderId(null);
+    };
+
+    // Fonction quand l'utilisateur termine la commande (status done + déverrouillage)
+    const handleCompleteSession = () => {
+        setOrders(prevOrders => prevOrders.map(o => 
+            o.id === selectedOrderId ? { ...o, status: 'done', isLocked: false } : o
+        ));
+        setSelectedOrderId(null);
+    };
+
+    // Trouver la commande active
+    const activeOrder = orders.find(o => o.id === selectedOrderId);
+
+    if (activeOrder) {
+        return (
+            <PickingSession 
+                order={activeOrder} 
+                onBack={handleExitSession} 
+                onComplete={handleCompleteSession}
+                onUpdateOrder={handleUpdateItems}
+            />
+        );
     }
 
     return (
@@ -173,39 +244,62 @@ export default function PickingView({ onBack }) {
             
             <div className="max-w-md mx-auto p-4 pt-6">
                 <div className="space-y-4">
-                    {MOCK_ORDERS.map((order) => (
-                        <button 
-                            key={order.id}
-                            onClick={() => setSelectedOrder(order)}
-                            className="w-full bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center hover:shadow-md hover:border-purple-300 transition-all text-left group"
-                        >
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                        order.status === 'done' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                                    }`}>
-                                        {order.status === 'done' ? 'Terminé' : 'En attente'}
-                                    </span>
-                                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                                        <Clock size={12}/> {order.date}
-                                    </span>
-                                </div>
-                                <h3 className="text-lg font-black text-slate-800 group-hover:text-purple-700 transition-colors">
-                                    {order.id}
-                                </h3>
-                                <div className="flex items-center gap-2 text-slate-500 text-sm mt-1">
-                                    <User size={14}/> {order.client}
-                                </div>
-                                <p className="text-xs text-slate-400 mt-2">
-                                    {order.items.length} articles à scanner
-                                </p>
-                            </div>
+                    {orders.map((order) => {
+                        const isDone = order.status === 'done';
+                        const isLocked = order.isLocked;
 
-                            <div className="bg-slate-50 p-3 rounded-full group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors">
-                                {order.status === 'done' ? <Check size={20} className="text-green-500"/> : <ArrowRight size={20}/>}
-                            </div>
-                        </button>
-                    ))}
+                        return (
+                            <button 
+                                key={order.id}
+                                onClick={() => handleSelectOrder(order)}
+                                className={`w-full p-5 rounded-2xl shadow-sm border flex justify-between items-center transition-all text-left group relative overflow-hidden
+                                    ${isDone 
+                                        ? 'bg-slate-100 border-slate-200 opacity-75 cursor-not-allowed' 
+                                        : 'bg-white border-slate-200 hover:shadow-md hover:border-purple-300'
+                                    }
+                                `}
+                            >
+                                {/* Effet visuel si verrouillé */}
+                                {isLocked && !isDone && (
+                                    <div className="absolute inset-0 bg-slate-50/80 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                                        <div className="bg-white px-3 py-1 rounded-full shadow-sm border flex items-center gap-2 text-xs font-bold text-slate-500">
+                                            <Lock size={12} /> En cours...
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                            isDone ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                            {isDone ? 'Terminé' : 'En attente'}
+                                        </span>
+                                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                                            <Clock size={12}/> {order.date}
+                                        </span>
+                                    </div>
+                                    <h3 className={`text-lg font-black transition-colors ${isDone ? 'text-slate-500' : 'text-slate-800 group-hover:text-purple-700'}`}>
+                                        {order.id}
+                                    </h3>
+                                    <div className="flex items-center gap-2 text-slate-500 text-sm mt-1">
+                                        <User size={14}/> {order.client}
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-2">
+                                        {order.items.length} articles à scanner
+                                    </p>
+                                </div>
+
+                                <div className={`p-3 rounded-full transition-colors ${
+                                    isDone 
+                                        ? 'bg-green-100 text-green-600' 
+                                        : 'bg-slate-50 group-hover:bg-purple-50 group-hover:text-purple-600'
+                                }`}>
+                                    {isDone ? <Check size={20}/> : <ArrowRight size={20}/>}
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </div>
