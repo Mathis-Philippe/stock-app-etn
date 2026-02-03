@@ -1,6 +1,6 @@
 import { ClipboardList, Search, Truck, ShoppingCart } from 'lucide-react';
 
-export default function MainMenu({ onNavigate }) {
+export default function MainMenu({ onNavigate, user, onLogout }) {
   const menuItems = [
     { id: 'inventory', title: 'Inventaire', icon: <ClipboardList size={32}/>, color: 'bg-blue-600', desc: 'Comptage et régularisation' },
     { id: 'check', title: 'Vérification', icon: <Search size={32}/>, color: 'bg-emerald-600', desc: 'Consulter un prix ou un stock' },
@@ -11,8 +11,15 @@ export default function MainMenu({ onNavigate }) {
   return (
     <div className="min-h-screen bg-slate-50 p-4">
       <header className="mb-8 mt-4">
-        <h1 className="text-3xl font-black text-slate-800">Bonjour</h1>
+        <h1 className="text-3xl font-black text-slate-800">Bonjour, {user}</h1>
         <p className="text-slate-500">Que souhaitez-vous faire aujourd'hui ?</p>
+
+        <button 
+            onClick={onLogout}
+            className="text-xs text-blue-600 font-bold bg-blue-50 px-3 py-2 rounded-lg border border-blue-100"
+        >
+            Changer
+        </button>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">

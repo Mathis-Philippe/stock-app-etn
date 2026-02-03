@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 
-export default function Header({ title, subtitle, onBack, colorClass = "bg-slate-900" }) {
+export default function Header({ title, subtitle, onBack, colorClass = "bg-slate-900", children }) {
   return (
     <header className={`${colorClass} text-white shadow-lg sticky top-0 z-50`}>
       <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -14,6 +14,10 @@ export default function Header({ title, subtitle, onBack, colorClass = "bg-slate
             <h1 className="text-lg font-bold leading-tight">{title}</h1>
             {subtitle && <p className="text-xs opacity-70">{subtitle}</p>}
           </div>
+        </div>
+
+        <div className="flex gap-2">
+          {children}
         </div>
       </div>
     </header>

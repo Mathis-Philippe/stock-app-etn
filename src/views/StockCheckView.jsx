@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { parseScanData } from '../utils/scanner';
+import { useState } from 'react';
+import { useScanListener } from '../hooks/useScannerListener';
 import { stockData } from '../stockData';
 import Header from '../components/Header';
 import { Search, MapPin, Box } from 'lucide-react';
@@ -7,30 +7,11 @@ import { Search, MapPin, Box } from 'lucide-react';
 export default function StockCheckView({ onBack }) {
   const [scannedProduct, setScannedProduct] = useState(null);
 
-  useEffect(() => {
-    let buffer = '';
-    let lastKeyTime = Date.now();
-    const handleKeyDown = (e) => {
-        if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) || e.key === ' ') {
-            e.preventDefault();
-        }
-      const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 2000) buffer = '';
-      lastKeyTime = currentTime;
-      if (e.key === 'Enter') buffer += " "; 
-      else if (e.key.length === 1) buffer += e.key;
-      
-      const detectedSku = parseScanData(buffer);
-      if (detectedSku) {
-        const product = stockData.find(p => p.sku === detectedSku);
-        if (product) setScannedProduct(product);
-        else alert(`Produit inconnu : ${detectedSku}`);
-        buffer = '';
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  useScanListener((detectedSku) => {
+      const product = stockData.find(p => p.sku === detectedSku);
+      if (product) setScannedProduct(product);
+      else alert(`Produit inconnu : ${detectedSku}`);
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 pb-10">

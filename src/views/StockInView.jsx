@@ -1,53 +1,26 @@
-import { useState, useEffect } from 'react';
-import { parseScanData } from '../utils/scanner';
+import { useState } from 'react';
+import { useScanListener } from '../hooks/useScannerListener';
 import { stockData } from '../stockData';
 import Header from '../components/Header';
 import NumericKeypad from '../components/NumericKeypad';
-import { Truck, PlusCircle, Save, History, Box, ArrowRight } from 'lucide-react';
+import { Truck, PlusCircle, Save, History, Box, ArrowRight, Download } from 'lucide-react';
 
-export default function StockInView({ onBack }) {
+export default function StockInView({ onBack, user }) {
   const [product, setProduct] = useState(null);
   const [addQty, setAddQty] = useState("");
   const [history, setHistory] = useState([]); 
 
 
-  useEffect(() => {
-    let buffer = '';
-    let lastKeyTime = Date.now();
-    
-    const handleKeyDown = (e) => {
-      if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) || e.key === ' ') {
-        e.preventDefault();
+  useScanListener((detectedSku) => {
+      const found = stockData.find(p => p.sku === detectedSku);
+      if (found) {
+          setProduct(found);
+          setAddQty("");
+      } else {
+          if(navigator.vibrate) navigator.vibrate(200);
+          alert("Produit inconnu !");
       }
-
-      const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 2000) buffer = '';
-      lastKeyTime = currentTime;
-
-      if (e.key === 'Enter') {
-          e.preventDefault();
-          buffer += " ";
-      } else if (e.key.length === 1) {
-          buffer += e.key;
-      }
-      
-      const detectedSku = parseScanData(buffer);
-      if (detectedSku) {
-        const found = stockData.find(p => p.sku === detectedSku);
-        if (found) {
-            setProduct(found);
-            setAddQty("");
-        } else {
-            if(navigator.vibrate) navigator.vibrate(200);
-            alert("Produit inconnu !");
-        }
-        buffer = '';
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  });
 
 
   const handleNumberClick = (num) => {
@@ -59,11 +32,6 @@ export default function StockInView({ onBack }) {
   };
 
 
-  const addFastQty = (amount) => {
-    const current = parseInt(addQty) || 0;
-    setAddQty((current + amount).toString());
-  };
-
   const handleValidate = () => {
     const qty = parseInt(addQty);
     if (!product || isNaN(qty) || qty <= 0) return;
@@ -72,7 +40,8 @@ export default function StockInView({ onBack }) {
         sku: product.sku,
         nom: product.nom,
         qty: qty,
-        time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
+        time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}),
+        user: user || 'Anonyme'
     };
 
     setHistory(prev => [newEntry, ...prev]);
@@ -80,9 +49,35 @@ export default function StockInView({ onBack }) {
     setAddQty("");
   };
 
+const downloadCSV = () => {
+    if (history.length === 0) return;
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFFReference;Nom;Quantite Ajoutee;Heure;Operateur\n";
+    
+    history.forEach(row => {
+        csvContent += `${row.sku};"${row.nom}";${row.qty};${row.time};${row.user}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `reception_${user}_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-10 select-none">
-        <Header title="Réception" subtitle="Entrée de stock" onBack={onBack} colorClass="bg-orange-700" />
+        <Header title="Réception" subtitle="Entrée de stock" onBack={onBack} colorClass="bg-orange-700">
+            {history.length > 0 && (
+                <button 
+                    onClick={downloadCSV} 
+                    className="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors"
+                    title="Exporter la liste"
+                >
+                    <Download size={20} />
+                </button>
+            )}
+        </Header>
 
         <div className="max-w-md mx-auto p-4 pt-6">
             

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { parseScanData } from '../utils/scanner';
+import { useState } from 'react';
+import { useScanListener } from '../hooks/useScannerListener';
 import { stockData } from '../stockData';
 import Header from '../components/Header';
 import NumericKeypad from '../components/NumericKeypad';
@@ -8,7 +8,7 @@ import {
   Download, Edit3, PackageCheck, ArrowLeft
 } from 'lucide-react';
 
-export default function InventoryView({ onBack }) {
+export default function InventoryView({ onBack, user }) {
   const [scannedProduct, setScannedProduct] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [quantityInput, setQuantityInput] = useState("");
@@ -35,30 +35,10 @@ export default function InventoryView({ onBack }) {
     }
   };
 
-  useEffect(() => {
-    let buffer = '';
-    let lastKeyTime = Date.now();
-    const handleKeyDown = (e) => {
-      if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) || e.key === ' ') {
-            e.preventDefault();
-        }
-      if (scannedProduct) return;
-
-      const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 2000) buffer = '';
-      lastKeyTime = currentTime;
-      if (e.key === 'Enter') buffer += " "; 
-      else if (e.key.length === 1) buffer += e.key;
-      
-      const detectedSku = parseScanData(buffer);
-      if (detectedSku) {
+  useScanListener((detectedSku) => {
+        if (scannedProduct) return;
         openInputForProduct(detectedSku);
-        buffer = '';
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [scannedProduct, inventory]);
+    });
 
   const handleNumberClick = (num) => {
     if (quantityInput.length < 5) { 
@@ -83,7 +63,8 @@ export default function InventoryView({ onBack }) {
         ...scannedProduct,
         stock_reel: countedQty,
         ecart: gap,
-        heure: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
+        heure: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}),
+        operateur: user || 'Anonyme'
     };
 
     if (isEditingMode) {
@@ -98,15 +79,18 @@ export default function InventoryView({ onBack }) {
     setIsEditingMode(false);
   };
 
-  const downloadCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,Reference,Nom,Stock Theorique,Stock Reel,Ecart,Heure\n";
+const downloadCSV = () => {
+
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFFReference;Nom;Stock Theorique;Stock Reel;Ecart;Heure;Operateur\n";
+    
     inventory.forEach(row => {
-        csvContent += `${row.sku},${row.nom},${row.stock_theorique},${row.stock_reel},${row.ecart},${row.heure}\n`;
+        csvContent += `${row.sku};"${row.nom}";${row.stock_theorique};${row.stock_reel};${row.ecart};${row.heure};${row.operateur}\n`;
     });
+    
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `inventaire_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `inventaire_${user}_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
   };
@@ -183,7 +167,7 @@ export default function InventoryView({ onBack }) {
                     <span className="w-1 h-8 bg-blue-500 ml-1 animate-pulse"></span>
                 </div>
               </div>
-              
+
               <NumericKeypad 
                 onNumber={handleNumberClick}
                 onDelete={handleDelete}
