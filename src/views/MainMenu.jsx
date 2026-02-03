@@ -1,4 +1,4 @@
-import { ClipboardList, Search, Truck, ShoppingCart } from 'lucide-react';
+import { ClipboardList, Search, Truck, ShoppingCart, LogOut } from 'lucide-react';
 
 export default function MainMenu({ onNavigate, user, onLogout }) {
   const menuItems = [
@@ -9,16 +9,19 @@ export default function MainMenu({ onNavigate, user, onLogout }) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4">
-      <header className="mb-8 mt-4">
-        <h1 className="text-3xl font-black text-slate-800">Bonjour, {user}</h1>
-        <p className="text-slate-500">Que souhaitez-vous faire aujourd'hui ?</p>
+<div className="min-h-screen bg-slate-50 p-4">
+      <header className="mb-8 mt-4 flex justify-between items-center">
+        
+        <div>
+          <h1 className="text-3xl font-black text-slate-800">Bonjour, {user}</h1>
+          <p className="text-slate-500">Que souhaitez-vous faire aujourd'hui ?</p>
+        </div>
 
         <button 
             onClick={onLogout}
-            className="text-xs text-blue-600 font-bold bg-blue-50 px-3 py-2 rounded-lg border border-blue-100"
+            className="text-xs text-red-600 font-bold bg-red-50 px-3 py-2 rounded-lg border border-red-100 transition-colors hover:bg-red-100"
         >
-            Changer
+            <LogOut size={14} className="inline mr-1 mb-0.5"/>
         </button>
       </header>
 
