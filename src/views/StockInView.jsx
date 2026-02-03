@@ -1,11 +1,11 @@
-import { useState} from 'react';
+import { useState } from 'react';
 import { useScanListener } from '../hooks/useScannerListener';
 import { stockData } from '../stockData';
 import Header from '../components/Header';
 import NumericKeypad from '../components/NumericKeypad';
-import { Truck, PlusCircle, Save, History, Box, ArrowRight } from 'lucide-react';
+import { Truck, PlusCircle, Save, History, Box, ArrowRight, Download } from 'lucide-react';
 
-export default function StockInView({ onBack }) {
+export default function StockInView({ onBack, user }) {
   const [product, setProduct] = useState(null);
   const [addQty, setAddQty] = useState("");
   const [history, setHistory] = useState([]); 
@@ -40,7 +40,8 @@ export default function StockInView({ onBack }) {
         sku: product.sku,
         nom: product.nom,
         qty: qty,
-        time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
+        time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}),
+        user: user || 'Anonyme'
     };
 
     setHistory(prev => [newEntry, ...prev]);
@@ -48,9 +49,35 @@ export default function StockInView({ onBack }) {
     setAddQty("");
   };
 
+const downloadCSV = () => {
+    if (history.length === 0) return;
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFFReference;Nom;Quantite Ajoutee;Heure;Operateur\n";
+    
+    history.forEach(row => {
+        csvContent += `${row.sku};"${row.nom}";${row.qty};${row.time};${row.user}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `reception_${user}_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-10 select-none">
-        <Header title="Réception" subtitle="Entrée de stock" onBack={onBack} colorClass="bg-orange-700" />
+        <Header title="Réception" subtitle="Entrée de stock" onBack={onBack} colorClass="bg-orange-700">
+            {history.length > 0 && (
+                <button 
+                    onClick={downloadCSV} 
+                    className="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors"
+                    title="Exporter la liste"
+                >
+                    <Download size={20} />
+                </button>
+            )}
+        </Header>
 
         <div className="max-w-md mx-auto p-4 pt-6">
             

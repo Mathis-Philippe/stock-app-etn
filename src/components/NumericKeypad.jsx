@@ -35,7 +35,7 @@ export default function NumericKeypad({ onNumber, onDelete, onValidate }) {
       <button 
         type="button" 
         onClick={onValidate} 
-        className={`${btnClass} flex items-center justify-center text-white bg-green-600 hover:bg-green-700 border-green-600 shadow-md`}
+        className={` flex items-center justify-center text-white bg-green-600 hover:bg-green-700 border-green-600 shadow-md rounded-xl`}
       >
         <Check size={28} strokeWidth={3} />
       </button>
