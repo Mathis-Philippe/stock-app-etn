@@ -24,8 +24,8 @@ export default function MainMenu({ onNavigate, user, onLogout }) {
             <LogOut size={14} className="inline mr-1 mb-0.5"/>
         </button>
       </header>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto items-center">
         {menuItems.map((item) => (
           <button 
             key={item.id}

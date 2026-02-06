@@ -1,5 +1,5 @@
-import { useState } from 'react';
-
+import { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast'; 
 
 import MainMenu from './views/MainMenu';
 import InventoryView from './views/InventoryView';
@@ -9,32 +9,69 @@ import PickingView from './views/PickingView';
 import LoginView from './views/LoginView';
 
 function App() {
-  const [currentView, setCurrentView] = useState('menu');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentView, setCurrentView] = useState(() => {
+    return sessionStorage.getItem('app_currentView') || 'menu';
+  });
+  
+  const [currentUser, setCurrentUser] = useState(() => {
+    return sessionStorage.getItem('app_currentUser') || null;
+  });
 
-  if (!currentUser) {
-    return <LoginView onLogin={(user) => setCurrentUser(user)} />;
-  }
+  useEffect(() => {
+    if (currentUser) {
+      sessionStorage.setItem('app_currentUser', currentUser);
+    } else {
+      sessionStorage.removeItem('app_currentUser');
+    }
+  }, [currentUser]);
 
+  useEffect(() => {
+    sessionStorage.setItem('app_currentView', currentView);
+  }, [currentView]);
 
-  switch (currentView) {
-    case 'inventory':
-      return <InventoryView user={currentUser} onBack={() => setCurrentView('menu')} />;
-    case 'check':
-      return <StockCheckView user={currentUser} onBack={() => setCurrentView('menu')} />;
-    case 'stock_in':
-      return <StockInView user={currentUser} onBack={() => setCurrentView('menu')} />;
-    case 'picking':
-      return <PickingView user={currentUser} onBack={() => setCurrentView('menu')} />;
-    default:
-      return ( 
-        <MainMenu
-          user={currentUser}
-          onNavigate={setCurrentView} 
-          onLogout={() => setCurrentUser(null)}
-        />
-      );
-  }
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentView('menu');
+    sessionStorage.removeItem('app_currentUser');
+    sessionStorage.removeItem('app_currentView');
+
+  };
+
+  return (
+    <>
+      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+
+      {!currentUser ? (
+        <LoginView onLogin={(user) => setCurrentUser(user)} />
+      ) : (
+        <>
+          {currentView === 'inventory' && (
+            <InventoryView user={currentUser} onBack={() => setCurrentView('menu')} />
+          )}
+          
+          {currentView === 'check' && (
+            <StockCheckView user={currentUser} onBack={() => setCurrentView('menu')} />
+          )}
+          
+          {currentView === 'stock_in' && (
+            <StockInView user={currentUser} onBack={() => setCurrentView('menu')} />
+          )}
+          
+          {currentView === 'picking' && (
+            <PickingView user={currentUser} onBack={() => setCurrentView('menu')} />
+          )}
+          
+          {currentView === 'menu' && (
+            <MainMenu
+              user={currentUser}
+              onNavigate={setCurrentView} 
+              onLogout={handleLogout}
+            />
+          )}
+        </>
+      )}
+    </>
+  );
 }
 
 export default App;

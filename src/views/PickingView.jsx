@@ -6,7 +6,6 @@ import {
     ChevronRight, User, Calendar, Clock, ArrowRight, Lock
 } from 'lucide-react';
 
-// Données initiales avec la nouvelle propriété isLocked
 const INITIAL_ORDERS = [
   { 
     id: "CMD-8024", 
@@ -43,9 +42,7 @@ const INITIAL_ORDERS = [
   }
 ];
 
-// Composant de session de picking
 const PickingSession = ({ order, onBack, onComplete, onUpdateOrder }) => {
-    // État local des articles basé sur la commande reçue
     const [items, setItems] = useState([...order.items]);
     const [feedback, setFeedback] = useState(null);
 
@@ -64,13 +61,11 @@ const PickingSession = ({ order, onBack, onComplete, onUpdateOrder }) => {
             return;
         }
 
-        // Mise à jour de l'article localement
         const newItems = [...items];
         newItems[index] = { ...item, qty_picked: item.qty_asked, status: 'done' };
         setItems(newItems);
         setFeedback({ type: 'success', text: `Validé : ${item.qty_asked}x ${item.sku}` });
         
-        // Sauvegarde de la progression dans l'état parent
         onUpdateOrder(order.id, newItems);
     };
 
@@ -78,7 +73,6 @@ const PickingSession = ({ order, onBack, onComplete, onUpdateOrder }) => {
         let buffer = '';
         let lastKeyTime = Date.now();
         const handleKeyDown = (e) => {
-            // Empêcher le scroll par défaut
             if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) || e.key === ' ') {
                 e.preventDefault();
             }
@@ -173,27 +167,28 @@ const PickingSession = ({ order, onBack, onComplete, onUpdateOrder }) => {
     );
 };
 
-// Composant Principal
 export default function PickingView({ onBack }) {
-    // État principal contenant toutes les commandes
-    const [orders, setOrders] = useState(INITIAL_ORDERS);
+    const [orders, setOrders] = useState(() => {
+        const saved = localStorage.getItem('app_picking_orders');
+        return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    });
     const [selectedOrderId, setSelectedOrderId] = useState(null);
 
-    // Fonction appelée quand un utilisateur clique sur une commande
+    useEffect(() => {
+        localStorage.setItem('app_picking_orders', JSON.stringify(orders));
+    }, [orders]);
+
     const handleSelectOrder = (order) => {
-        // 1. Vérification si terminé
         if (order.status === 'done') {
             alert("Cette commande est déjà terminée !");
             return;
         }
 
-        // 2. Vérification si verrouillé (simulé pour un autre utilisateur)
         if (order.isLocked) {
             alert("Cette commande est en cours de traitement par un autre utilisateur.");
             return;
         }
 
-        // 3. Verrouiller la commande et entrer
         const updatedOrders = orders.map(o => 
             o.id === order.id ? { ...o, isLocked: true } : o
         );
@@ -201,14 +196,12 @@ export default function PickingView({ onBack }) {
         setSelectedOrderId(order.id);
     };
 
-    // Fonction pour mettre à jour les articles en temps réel (sauvegarde progess)
     const handleUpdateItems = (orderId, newItems) => {
         setOrders(prevOrders => prevOrders.map(o => 
             o.id === orderId ? { ...o, items: newItems } : o
         ));
     };
 
-    // Fonction quand l'utilisateur revient en arrière SANS finir (déverrouillage)
     const handleExitSession = () => {
         setOrders(prevOrders => prevOrders.map(o => 
             o.id === selectedOrderId ? { ...o, isLocked: false } : o
@@ -216,7 +209,6 @@ export default function PickingView({ onBack }) {
         setSelectedOrderId(null);
     };
 
-    // Fonction quand l'utilisateur termine la commande (status done + déverrouillage)
     const handleCompleteSession = () => {
         setOrders(prevOrders => prevOrders.map(o => 
             o.id === selectedOrderId ? { ...o, status: 'done', isLocked: false } : o
@@ -224,7 +216,6 @@ export default function PickingView({ onBack }) {
         setSelectedOrderId(null);
     };
 
-    // Trouver la commande active
     const activeOrder = orders.find(o => o.id === selectedOrderId);
 
     if (activeOrder) {
@@ -259,7 +250,6 @@ export default function PickingView({ onBack }) {
                                     }
                                 `}
                             >
-                                {/* Effet visuel si verrouillé */}
                                 {isLocked && !isDone && (
                                     <div className="absolute inset-0 bg-slate-50/80 flex items-center justify-center z-10 backdrop-blur-[1px]">
                                         <div className="bg-white px-3 py-1 rounded-full shadow-sm border flex items-center gap-2 text-xs font-bold text-slate-500">

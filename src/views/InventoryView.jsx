@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useScanListener } from '../hooks/useScannerListener';
 import { stockData } from '../stockData';
-import Header from '../components/Header';
 import NumericKeypad from '../components/NumericKeypad';
 import { 
-  Scan, Box, CheckCircle2, AlertTriangle, History, 
-  Download, Edit3, PackageCheck, ArrowLeft
+  Scan, CheckCircle2, AlertTriangle, History, 
+  Download, ArrowLeft, Eye, X, MapPin, PackageX
 } from 'lucide-react';
 
 export default function InventoryView({ onBack, user }) {
@@ -14,11 +13,21 @@ export default function InventoryView({ onBack, user }) {
   const [quantityInput, setQuantityInput] = useState("");
   const [message, setMessage] = useState(null);
   const [isEditingMode, setIsEditingMode] = useState(false);
+  const [showUnscanned, setShowUnscanned] = useState(false);
 
+  const unscannedProducts = useMemo(() => {
+    return stockData
+      .filter(item => !inventory.some(inv => inv.sku === item.sku))
+      .sort((a, b) => a.emplacement.localeCompare(b.emplacement));
+  }, [inventory]);
+
+  const progressPercentage = Math.round((inventory.length / stockData.length) * 100);
+  
+  
   const openInputForProduct = (productSku) => {
     const baseProduct = stockData.find(p => p.sku === productSku);
     if (!baseProduct) {
-        setMessage({ type: 'error', text: `Produit inconnu : ${productSku}` });
+        setMessage({ type: 'error', text: "Code inconnu. Vérifiez l'étiquette et recommencez." });
         return;
     }
     const alreadyCountedItem = inventory.find(item => item.sku === productSku);
@@ -54,9 +63,7 @@ export default function InventoryView({ onBack, user }) {
     if (!scannedProduct) return;
     const countedQty = parseInt(quantityInput);
     
-    if (isNaN(countedQty)) {
-        return; 
-    }
+    if (isNaN(countedQty)) return; 
 
     const gap = countedQty - scannedProduct.stock_theorique;
     const record = {
@@ -79,14 +86,11 @@ export default function InventoryView({ onBack, user }) {
     setIsEditingMode(false);
   };
 
-const downloadCSV = () => {
-
+  const downloadCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,\uFEFFReference;Nom;Stock Theorique;Stock Reel;Ecart;Heure;Operateur\n";
-    
     inventory.forEach(row => {
         csvContent += `${row.sku};"${row.nom}";${row.stock_theorique};${row.stock_reel};${row.ecart};${row.heure};${row.operateur}\n`;
     });
-    
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -94,7 +98,6 @@ const downloadCSV = () => {
     document.body.appendChild(link);
     link.click();
   };
-  const progress = Math.round((inventory.length / stockData.length) * 100);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans select-none">
@@ -108,23 +111,38 @@ const downloadCSV = () => {
               </button>
               <div>
                 <h1 className="text-lg font-bold leading-tight">Inventaire</h1>
-                <p className="text-xs text-slate-400">Terminal de saisie</p>
+                <p className="text-xs text-slate-400">
+                    {inventory.length} / {stockData.length} scannés
+                </p>
               </div>
             </div>
-            <button onClick={downloadCSV} className="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg">
-              <Download size={16} />
-            </button>
+            
+            <div className="flex gap-2">
+                <button 
+                    onClick={() => setShowUnscanned(true)} 
+                    className="relative bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg text-blue-300 hover:bg-slate-700 transition-colors"
+                >
+                    <Eye size={20} />
+                </button>
+                <button onClick={downloadCSV} className="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg hover:bg-slate-700">
+                    <Download size={20} />
+                </button>
+            </div>
           </div>
-          <div className="bg-slate-800 rounded-full h-3 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full transition-all" style={{ width: `${progress}%` }} />
+          
+          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-500 ease-out" 
+                style={{ width: `${progressPercentage}%` }} 
+            />
           </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto p-4 pb-24">
         {message && (
-          <div className={`mb-4 p-3 rounded-xl flex items-center gap-3 shadow-sm border ${
-            message.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
+          <div className={`mb-4 p-3 rounded-xl flex items-center gap-3 shadow-sm border animate-slide-up ${
+            message.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
           }`}>
             {message.type === 'error' ? <AlertTriangle size={20}/> : <CheckCircle2 size={20}/>}
             <span className="font-bold text-sm">{message.text}</span>
@@ -186,12 +204,91 @@ const downloadCSV = () => {
           <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-slate-300 rounded-3xl bg-slate-50 text-slate-400">
             <Scan size={48} className="text-blue-500 mb-4 animate-pulse" />
             <h3 className="text-lg font-bold text-slate-700">Prêt à scanner</h3>
-            <p className="text-center text-sm mt-1">
-              Le clavier système n'est plus nécessaire.
-            </p>
+            <p className="text-center text-sm mt-1">Le clavier système n'est plus nécessaire.</p>
           </div>
         )}
       </main>
+
+      {showUnscanned && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowUnscanned(false)}
+          />
+
+          <div className="relative bg-white w-full sm:max-w-md h-[85vh] sm:h-auto sm:max-h-[80vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col animate-slide-up overflow-hidden">
+            
+            <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
+                <div>
+                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                        <PackageX size={20} className="text-slate-500"/>
+                        Produits restants
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1">
+                        Triés par emplacement pour optimiser le trajet
+                    </p>
+                </div>
+                <button 
+                    onClick={() => setShowUnscanned(false)}
+                    className="p-2 bg-white border border-slate-200 rounded-full hover:bg-slate-100 transition-colors"
+                >
+                    <X size={20} className="text-slate-600"/>
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50">
+                {unscannedProducts.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                            <CheckCircle2 size={40} className="text-green-600"/>
+                        </div>
+                        <h4 className="text-xl font-black text-slate-800 mb-2">Inventaire terminé !</h4>
+                        <p className="text-slate-500">Tous les produits ont été scannés. Vous pouvez télécharger le rapport.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {unscannedProducts.map((item) => (
+                            <div 
+                                key={item.sku} 
+                                className="group bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-3"
+                            >
+                                <div className="flex flex-col items-center justify-center w-12 h-12 bg-slate-100 rounded-lg border border-slate-200 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors">
+                                    <MapPin size={14} className="text-slate-400 mb-0.5"/>
+                                    <span className="text-xs font-black text-slate-700">{item.emplacement.split('-')[1] || item.emplacement}</span>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                            {item.emplacement}
+                                        </span>
+                                        <h4 className="font-bold text-slate-800 truncate text-sm">{item.sku}</h4>
+                                    </div>
+                                    <p className="text-xs text-slate-500 truncate mt-0.5">{item.nom}</p>
+                                </div>
+
+                                <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="p-4 bg-white border-t border-slate-100">
+                <div className="flex justify-between text-sm mb-2 font-medium">
+                    <span className="text-slate-500">Progression</span>
+                    <span className="text-blue-600">{Math.round((inventory.length / stockData.length) * 100)}%</span>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                        style={{ width: `${(inventory.length / stockData.length) * 100}%` }}
+                    />
+                </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
